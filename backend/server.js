@@ -3,14 +3,16 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 
-// Load env vars
 require('dotenv').config();
-console.log("EMAIL:", process.env.EMAIL_USER);
-console.log("PASS:", process.env.EMAIL_APP_PASSWORD ? "Loaded" : "Missing");
+
 const app = express();
 
-// Middleware
-app.use(cors());
+// ✅ CORS (ONLY ONCE)
+app.use(cors({
+  origin: 'https://vet-nexara.vercel.app',
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Database connection
