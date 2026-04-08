@@ -36,6 +36,9 @@ app.use('/api/scan', require('./routes/scanner'));
 
 // Health check
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+app.get('/', (req, res) => {
+  res.send('VetNexara API Running 🚀');
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
