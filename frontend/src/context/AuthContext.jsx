@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const [activeScan, setActiveScanState] = useState(null);
 
   const api = axios.create({
-    baseURL: 'https://vetnexara.onrender.com'
+    baseURL: import.meta.env.VITE_API_URL
   });
 
   // ✅ Attach token automatically
