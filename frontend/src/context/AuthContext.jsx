@@ -8,14 +8,15 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ GLOBAL SCAN STATE
+  // ✅ Global scan state
   const [activeScan, setActiveScanState] = useState(null);
 
   const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL
+    baseURL: import.meta.env.VITE_API_URL,
+    withCredentials: true // ✅ Send cookies/credentials with every request
   });
 
-  // ✅ Attach token automatically
+  // ✅ Attach token automatically to every request
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -24,15 +25,33 @@ export const AuthProvider = ({ children }) => {
     return config;
   });
 
-  // ✅ SAFE SETTER (sync with localStorage)
+  // ✅ Global response error handler
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        // Token expired or invalid — auto logout
+        localStorage.removeItem('token');
+        setUser(null);
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  // ✅ Safe setter — syncs with localStorage
   const setActiveScan = (data) => {
     setActiveScanState(data);
-    localStorage.setItem("lastScan", JSON.stringify(data));
+    if (data) {
+      localStorage.setItem("lastScan", JSON.stringify(data));
+    } else {
+      localStorage.removeItem("lastScan");
+    }
   };
 
-  // ✅ Load user
+  // ✅ Load user from token
   const loadUser = async () => {
-    if (!localStorage.getItem('token')) {
+    const token = localStorage.getItem('token');
+    if (!token) {
       setLoading(false);
       return;
     }
@@ -40,13 +59,15 @@ export const AuthProvider = ({ children }) => {
       const res = await api.get('/auth/me');
       setUser(res.data);
     } catch (err) {
+      console.error("Failed to load user:", err?.response?.data || err.message);
       localStorage.removeItem('token');
       setUser(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // ✅ Load last scan from localStorage (safe parsing)
+  // ✅ Load user + last scan on app start
   useEffect(() => {
     loadUser();
 
@@ -61,29 +82,33 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // ✅ Login — FIXED (removed duplicate return)
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
-    return res.data;
-
-
-    return res.data;
+    return res.data; // ✅ Only one return
   };
 
+  // ✅ Google Login — FIXED (safe JSON parse)
   const googleLogin = async (credential) => {
     const res = await api.post('/auth/google-login', { credential });
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
-    const savedScan = localStorage.getItem("lastScan");
-    if (savedScan) {
-      setActiveScan(JSON.parse(savedScan));
-    }
 
+    try {
+      const savedScan = localStorage.getItem("lastScan");
+      if (savedScan) {
+        setActiveScan(JSON.parse(savedScan));
+      }
+    } catch (err) {
+      console.error("Error restoring scan after Google login:", err);
+    }
 
     return res.data;
   };
 
+  // ✅ Register
   const register = async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
     localStorage.setItem('token', res.data.token);
@@ -91,8 +116,10 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
+  // ✅ Logout — clears everything
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('lastScan');
     setUser(null);
     setActiveScanState(null);
   };
