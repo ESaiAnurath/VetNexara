@@ -11,10 +11,9 @@ export const AuthProvider = ({ children }) => {
   // ✅ Global scan state
   const [activeScan, setActiveScanState] = useState(null);
 
-  const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-    withCredentials: true // ✅ Send cookies/credentials with every request
-  });
+ const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL
+});
 
   // ✅ Attach token automatically to every request
   api.interceptors.request.use((config) => {
